@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
    {
        options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -72,27 +73,27 @@ app.UseCors("CorsPolicy");
 app.UseAuthorization();
 app.UseAuthentication();
 
-app.MapGet("/", () => "Hello World!");
+app.MapGet("/", () => "Hello World!").ExcludeFromDescription();
 
 app.MapPost("/gettokenbylogin",
     (UserLogin user, IUserService userService) => Login(user, userService));
 
-app.MapPost("/add",
+app.MapPost("/addemployee",
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Administrator")]
 (Employee employee, IEmployeeService employeeService) => AddEmployee(employee, employeeService));
 
-app.MapGet("/getbyid",
+app.MapGet("/getemployeebyid",
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Administrator, Member")]
 (int id, IEmployeeService employeeService) => GetEmployeeById(id, employeeService));
 
-app.MapGet("/get",
+app.MapGet("/getemployeelist",
 (IEmployeeService employeeService) => GetEmployees(employeeService));
 
-app.MapPut("/update",
+app.MapPut("/updateemployee",
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Administrator")]
 (Employee employee, IEmployeeService employeeService) => UpdateEmployee(employee, employeeService));
 
-app.MapDelete("/delete",
+app.MapDelete("/deleteemployee",
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Administrator")]
 (int id, IEmployeeService employeeService) => DeleteEmployee(id, employeeService));
 
