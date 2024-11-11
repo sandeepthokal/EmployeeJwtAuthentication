@@ -2,8 +2,12 @@
 
 namespace EmployeeJwtAuthentication.Repositories
 {
+    //UserRepository manages the data for User entity
     public class UserRepository
     {
+        /// <summary>
+        /// Mocked the data for Users which will be used further in login
+        /// </summary>
         public static List<User> Users = new()
         {
             new()

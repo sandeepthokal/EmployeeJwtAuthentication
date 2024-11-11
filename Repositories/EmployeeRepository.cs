@@ -2,8 +2,14 @@
 
 namespace EmployeeJwtAuthentication.Repositories
 {
+    /// <summary>
+    /// Employee Repository manages the Data for Employee Model
+    /// </summary>
     public class EmployeeRepository
     {
+        /// <summary>
+        /// Mocked the data for Employees which will be used for CRUD operations
+        /// </summary>
         public static List<Employee> Employees = new()
         {
             new Employee() { Id =1, Name="Deepak Thokal", Email="deepak.thokal@email.com", City="Mumbai",

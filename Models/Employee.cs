@@ -1,5 +1,8 @@
 ﻿namespace EmployeeJwtAuthentication.Models
 {
+    /// <summary>
+    /// Employee details Model
+    /// </summary>
     public class Employee
     {
         public int Id { get; set; }

@@ -2,6 +2,7 @@
 
 namespace EmployeeJwtAuthentication.Services
 {
+    //This interface has declaration of CRUD operations on Employee
     public interface IEmployeeService
     {
         public Employee AddEmployee(Employee employee);

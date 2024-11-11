@@ -7,12 +7,15 @@ using System.Text;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authorization;
+using EmployeeJwtAuthentication.Middleware;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
    {
+       //Added Swagger security definition and requirement to allow adding bearer token while testing APIs
        options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
        {
            Type = SecuritySchemeType.Http,
@@ -36,7 +39,7 @@ builder.Services.AddSwaggerGen(options =>
            }
        });
    });
-
+//Added JWT Authentication and validation criteria
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters()
@@ -61,53 +64,67 @@ options.AddPolicy("CorsPolicy",
         .AllowCredentials());
 });
 
-
+//Injected the required services to achieve Dependency Injection
 builder.Services.AddSingleton<IEmployeeService, EmployeeService>();
 builder.Services.AddSingleton<IUserService, UserService>();
 
 var app = builder.Build();
 
+// Use the custom error handling middleware
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+//Middlewares
 app.UseSwagger();
 app.UseCors("CorsPolicy");
 app.UseAuthorization();
 app.UseAuthentication();
 
-app.MapGet("/", () => "Hello World!");
+//Minimal API redirection instead of using controllers to call services
+app.MapGet("/", () => "Hello World!").ExcludeFromDescription();
 
 app.MapPost("/gettokenbylogin",
     (UserLogin user, IUserService userService) => Login(user, userService));
 
-app.MapPost("/add",
+app.MapPost("/addemployee",
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Administrator")]
 (Employee employee, IEmployeeService employeeService) => AddEmployee(employee, employeeService));
 
-app.MapGet("/getbyid",
+app.MapGet("/getemployeebyid",
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Administrator, Member")]
 (int id, IEmployeeService employeeService) => GetEmployeeById(id, employeeService));
 
-app.MapGet("/get",
+app.MapGet("/getemployeelist",
 (IEmployeeService employeeService) => GetEmployees(employeeService));
 
-app.MapPut("/update",
+app.MapPut("/updateemployee",
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Administrator")]
 (Employee employee, IEmployeeService employeeService) => UpdateEmployee(employee, employeeService));
 
-app.MapDelete("/delete",
+app.MapDelete("/deleteemployee",
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Administrator")]
 (int id, IEmployeeService employeeService) => DeleteEmployee(id, employeeService));
 
+//User's can login with their username and password.
+//After successful login the bearer token will be shared in response.
 IResult Login(UserLogin user, IUserService userService)
 {
+    if(user == null)
+    {
+        throw new ArgumentNullException(nameof(user));
+    }
     if (!string.IsNullOrEmpty(user.Username) &&
         !string.IsNullOrEmpty(user.Password))
     {
+        //chec if User exist with provided username and password
         var loggedInUser = userService.GetUser(user);
         if (loggedInUser == null)
         {
+            //Return not found if user does not exist
             return Results.NotFound("User does not exist");
         }
         else
         {
+            //Claims for JWT token
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, loggedInUser.Username),
@@ -116,6 +133,7 @@ IResult Login(UserLogin user, IUserService userService)
                 new Claim(ClaimTypes.Surname, loggedInUser.LastName),
                 new Claim(ClaimTypes.Role, loggedInUser.Role)
             };
+            //Token parameters
             var token = new JwtSecurityToken(
                 issuer: builder.Configuration["Jwt:Issuer"],
                 audience: builder.Configuration["Jwt:Audience"],
@@ -126,7 +144,7 @@ IResult Login(UserLogin user, IUserService userService)
                     new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
                     SecurityAlgorithms.HmacSha256)
                 );
-
+            //Write the JWT token
             var bearerToken = new JwtSecurityTokenHandler().WriteToken(token);
 
             return Results.Ok(bearerToken);
@@ -135,12 +153,18 @@ IResult Login(UserLogin user, IUserService userService)
     return Results.BadRequest("Username or Password is incorrect");
 }
 
+//Redirect to Employee service to create employee
 IResult AddEmployee(Employee employee, IEmployeeService employeeService)
 {
+    if (employee == null)
+    {
+        throw new ArgumentNullException(nameof(employee));
+    }
     var result = employeeService.AddEmployee(employee);
     return Results.Ok(result);
 }
 
+//Redirect to Employee service to Get employee by Id
 IResult GetEmployeeById(int id, IEmployeeService employeeService)
 {
     var employee = employeeService.GetEmployeeById(id);
@@ -151,14 +175,20 @@ IResult GetEmployeeById(int id, IEmployeeService employeeService)
     return Results.Ok(employee);
 }
 
+//Redirect to Employee service to List all employees
 IResult GetEmployees(IEmployeeService employeeService)
 {
     var employees = employeeService.GetEmployees();
     return Results.Ok(employees);
 }
 
+//Redirect to Employee service to update employee details
 IResult UpdateEmployee(Employee employee, IEmployeeService employeeService)
 {
+    if (employee == null)
+    {
+        throw new ArgumentNullException(nameof(employee));
+    }
     var updatedEmployee = employeeService.UpdateEmployee(employee);
     if (updatedEmployee == null)
     {
@@ -167,6 +197,7 @@ IResult UpdateEmployee(Employee employee, IEmployeeService employeeService)
     return Results.Ok(updatedEmployee);
 }
 
+//Redirect to Employee service to delete employee
 IResult DeleteEmployee(int id, IEmployeeService employeeService)
 {
     var result = employeeService.DeleteEmployee(id);
@@ -180,3 +211,7 @@ IResult DeleteEmployee(int id, IEmployeeService employeeService)
 app.UseSwaggerUI();
 
 app.Run();
+
+
+// Make the implicit Program class public so test projects can access it
+public partial class Program { }
