@@ -79,8 +79,7 @@ app.UseCors("CorsPolicy");
 app.UseAuthorization();
 app.UseAuthentication();
 
-//Minimal API redirection instead of using controllers to call services
-app.MapGet("/", () => "Hello World!").ExcludeFromDescription();
+app.MapGet("/", () => "Hello World!");
 
 app.MapPost("/gettokenbylogin",
     (UserLogin user, IUserService userService) => Login(user, userService));
