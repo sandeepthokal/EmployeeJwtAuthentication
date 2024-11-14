@@ -13,6 +13,7 @@ using EmployeeJwtAuthentication.Middleware;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen(options =>
    {
        //Added Swagger security definition and requirement to allow adding bearer token while testing APIs
@@ -67,9 +68,9 @@ options.AddPolicy("CorsPolicy",
 //Injected the required services to achieve Dependency Injection
 builder.Services.AddSingleton<IEmployeeService, EmployeeService>();
 builder.Services.AddSingleton<IUserService, UserService>();
-
+builder.Services.AddControllers();
 var app = builder.Build();
-
+app.MapControllers();
 // Use the custom error handling middleware
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
@@ -79,29 +80,8 @@ app.UseCors("CorsPolicy");
 app.UseAuthorization();
 app.UseAuthentication();
 
-app.MapGet("/", () => "Hello World!");
-
 app.MapPost("/gettokenbylogin",
     (UserLogin user, IUserService userService) => Login(user, userService));
-
-app.MapPost("/addemployee",
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Administrator")]
-(Employee employee, IEmployeeService employeeService) => AddEmployee(employee, employeeService));
-
-app.MapGet("/getemployeebyid",
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Administrator, Member")]
-(int id, IEmployeeService employeeService) => GetEmployeeById(id, employeeService));
-
-app.MapGet("/getemployeelist",
-(IEmployeeService employeeService) => GetEmployees(employeeService));
-
-app.MapPut("/updateemployee",
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Administrator")]
-(Employee employee, IEmployeeService employeeService) => UpdateEmployee(employee, employeeService));
-
-app.MapDelete("/deleteemployee",
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Administrator")]
-(int id, IEmployeeService employeeService) => DeleteEmployee(id, employeeService));
 
 //User's can login with their username and password.
 //After successful login the bearer token will be shared in response.
@@ -152,60 +132,6 @@ IResult Login(UserLogin user, IUserService userService)
     return Results.BadRequest("Username or Password is incorrect");
 }
 
-//Redirect to Employee service to create employee
-IResult AddEmployee(Employee employee, IEmployeeService employeeService)
-{
-    if (employee == null)
-    {
-        throw new ArgumentNullException(nameof(employee));
-    }
-    var result = employeeService.AddEmployee(employee);
-    return Results.Ok(result);
-}
-
-//Redirect to Employee service to Get employee by Id
-IResult GetEmployeeById(int id, IEmployeeService employeeService)
-{
-    var employee = employeeService.GetEmployeeById(id);
-    if (employee == null)
-    {
-        return Results.NotFound("Employee does not exist");
-    }
-    return Results.Ok(employee);
-}
-
-//Redirect to Employee service to List all employees
-IResult GetEmployees(IEmployeeService employeeService)
-{
-    var employees = employeeService.GetEmployees();
-    return Results.Ok(employees);
-}
-
-//Redirect to Employee service to update employee details
-IResult UpdateEmployee(Employee employee, IEmployeeService employeeService)
-{
-    if (employee == null)
-    {
-        throw new ArgumentNullException(nameof(employee));
-    }
-    var updatedEmployee = employeeService.UpdateEmployee(employee);
-    if (updatedEmployee == null)
-    {
-        return Results.NotFound("Employee does not exist");
-    }
-    return Results.Ok(updatedEmployee);
-}
-
-//Redirect to Employee service to delete employee
-IResult DeleteEmployee(int id, IEmployeeService employeeService)
-{
-    var result = employeeService.DeleteEmployee(id);
-    if (!result)
-    {
-        return Results.BadRequest("Failed to delete employee");
-    }
-    return Results.Ok(result);
-}
 
 app.UseSwaggerUI();
 
